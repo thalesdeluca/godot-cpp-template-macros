@@ -2,10 +2,10 @@
 
 #include "internal/stubs.h"
 #include <godot_cpp/classes/node.hpp>
-#include "generated/example.gen.h"
+#include "generated/example_macro.gen.h"
 
 namespace godot {
-    class Example : public Node {
+    class ExampleMacro : public Node {
         GD_GENERATED_BODY()
         GDSIGNAL("test_signal", float, param1, int, param2)
 
