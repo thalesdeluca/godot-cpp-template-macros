@@ -1,0 +1,20 @@
+[configuration]
+
+entry_symbol = "game_library_init"
+compatibility_minimum = "4.5"
+reloadable = true
+
+[libraries]
+
+macos.debug = "./debug/libexample_macro.macos.template_debug.dylib"
+macos.release = "./release/libexample_macro.macos.template_release.dylib"
+windows.debug.x86_32 = "./debug/example_macro.windows.template_debug.x86_32.dll"
+windows.release.x86_32 = "./release/example_macro.windows.template_release.x86_32.dll"
+windows.debug.x86_64 = "./debug/example_macro.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "./release/example_macro.windows.template_release.x86_64.dll"
+linux.debug.x86_64 = "./debug/libexample_macro.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "./release/libexample_macro.linux.template_release.x86_64.so"
+linux.debug.arm64 = "./debug/libexample_macro.linux.template_debug.arm64.so"
+linux.release.arm64 = "./release/libexample_macro.linux.template_release.arm64.so"
+linux.debug.rv64 = "./debug/libexample_macro.linux.template_debug.rv64.so"
+linux.release.rv64 = "./release/libexample_macro.linux.template_release.rv64.so"
