@@ -29,13 +29,14 @@ VariantDir(gen_dir, "src/generated", duplicate=0)
 # Collects all .cpp files in both the main and generated variant folders.
 sources = Glob(f"{build_dir}/*.cpp") + Glob(f"{gen_dir}/*.cpp")
 
+project_name="macros"
 # The filename for the dynamic library for this GDExtension.
 # $SHLIBPREFIX is a platform specific prefix for the dynamic library ('lib' on Unix, '' on Windows).
 # $SHLIBSUFFIX is the platform specific suffix for the dynamic library (for example '.dll' on Windows).
 # env["suffix"] includes the build's feature tags (e.g. '.windows.template_debug.x86_64')
 # (see https://docs.godotengine.org/en/stable/tutorials/export/feature_tags.html).
 # The final path should match a path in the '.gdextension' file.
-lib_filename = "{}macros{}{}".format(env.subst('$SHLIBPREFIX'), env["suffix"], env.subst('$SHLIBSUFFIX'))
+lib_filename = "{}{}{}{}".format(env.subst('$SHLIBPREFIX'), project_name, env["suffix"], env.subst('$SHLIBSUFFIX'))
 build_type = env["suffix"].split("_")[1].split(".")[0]
 # Creates a SCons target for the path with our sources.
 library = env.SharedLibrary(
