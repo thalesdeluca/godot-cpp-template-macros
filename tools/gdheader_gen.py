@@ -114,11 +114,12 @@ def build_signal_params_string(parameters_array):
 def generate(src_dir, out_dir):
     os.makedirs(out_dir, exist_ok=True)
 
-    for filename in sorted(os.listdir(src_dir)):
-        if not filename.endswith('.h') or filename.endswith('.gen.h'):
-            continue
+    for root, dirs, files in os.walk(src_dir):
+        for filename in files:
+            if not filename.endswith('.h') or filename.endswith('.gen.h'):
+                continue
 
-        filepath = os.path.join(src_dir, filename)
+            filepath = os.path.join(root, filename)
         result = parse_header(filepath)
         if not result:
             continue
