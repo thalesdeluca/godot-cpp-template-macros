@@ -1,0 +1,20 @@
+[configuration]
+
+entry_symbol = "game_library_init"
+compatibility_minimum = "4.5"
+reloadable = false
+
+[libraries]
+
+macos.debug = "./debug/libmacros.macos.template_debug.dylib"
+macos.release = "./release/libmacros.macos.template_release.dylib"
+windows.debug.x86_32 = "./debug/macros.windows.template_debug.x86_32.dll"
+windows.release.x86_32 = "./release/macros.windows.template_release.x86_32.dll"
+windows.debug.x86_64 = "./debug/macros.windows.template_debug.x86_64.dll"
+windows.release.x86_64 = "./release/macros.windows.template_release.x86_64.dll"
+linux.debug.x86_64 = "./debug/libmacros.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "./release/libmacros.linux.template_release.x86_64.so"
+linux.debug.arm64 = "./debug/libmacros.linux.template_debug.arm64.so"
+linux.release.arm64 = "./release/libmacros.linux.template_release.arm64.so"
+linux.debug.rv64 = "./debug/libmacros.linux.template_debug.rv64.so"
+linux.release.rv64 = "./release/libmacros.linux.template_release.rv64.so"

@@ -1,0 +1,10 @@
+.claude/
+.idea/
+.vscode/
+
+~*
+vc140.pdb
+.sconsign.dblite
+project/bin/debug/*
+project/bin/release/*
+out/

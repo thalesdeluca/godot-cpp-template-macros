@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://th87ct6vrp7n"]
+
+[ext_resource type="Script" uid="uid://bpofmcvqjd86f" path="res://main.gd" id="1_ig7tw"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_7dm0k"]
+
+[node name="Main" type="Node3D" unique_id=1489216318]
+script = ExtResource("1_ig7tw")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2095199384]
+mesh = SubResource("CapsuleMesh_7dm0k")
+
+[node name="Example" type="Example" parent="." unique_id=323267529]
+
+[connection signal="test_signal" from="Example" to="." method="_on_example_test_signal"]
