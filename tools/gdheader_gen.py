@@ -60,8 +60,9 @@ class ParsedHeader:
     lifecycle_editor_methods: list 
 
 def parse_class_declaration(content):
-    """Extract class name and parent class from header."""
-    class_match = re.search(r'class\s+(\w+)\s*:\s*public\s+(\w+)[^;]*\{', content)
+    """Extract class name and parent class from header.
+    Handles any inheritance access level: public, private, protected, or none."""
+    class_match = re.search(r'class\s+(\w+)\s*:\s*(?:(?:public|private|protected)\s+)?(\w+)[^;]*\{', content)
     if not class_match:
         return None, None
     return class_match.group(1), class_match.group(2)
