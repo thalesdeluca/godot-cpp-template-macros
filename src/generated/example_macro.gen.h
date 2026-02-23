@@ -4,6 +4,12 @@
     GDCLASS(ExampleMacro, Node) \
 protected: \
     static void _bind_methods(); \
+private: \
+    NodePath _camera_path; \
 public: \
+    void _ready() override; \
     float get_speed() const; \
-    void set_speed(float val);
+    void set_speed(float val); \
+    NodePath get_camera_path() const; \
+    void set_camera_path(NodePath val); \
+    void _resolve_node_paths();

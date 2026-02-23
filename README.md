@@ -41,6 +41,12 @@ float speed;
 
 GDPROPERTY()
 String class_name;
+
+GDPROPERTY()
+Camera3D* camera;
+
+GDPROPERTY()
+float speed = 10.0f;  // default values are supported
 ```
 
 Supported types:
@@ -50,6 +56,8 @@ Supported types:
 - `String` → Godot `STRING`
 - `Vector2`, `Vector3` → Godot `VECTOR2`, `VECTOR3`
 - `Color` → Godot `COLOR`
+- `NodePath` → Godot `NODE_PATH`
+- `SomeNode*` (pointer to any Godot object) → Godot `NODE_PATH` (exposed as a path that resolves to the pointer at runtime)
 
 ### `GDFUNCTION()`
 
@@ -74,6 +82,75 @@ GDSIGNAL("health_changed", float, new_health)
 ```
 
 Signal syntax: `GDSIGNAL("signal_name", Type1, param1, Type2, param2, ...)`
+
+### Lifecycle Methods
+
+The generator automatically binds Godot's lifecycle methods. Declare them in your class and the generator creates the necessary overrides:
+
+```cpp
+void ready();              // Called when node enters scene tree
+void process(double delta); // Called every frame
+void physics_process(double delta); // Called every physics frame
+```
+
+When implemented in your `.cpp` file, these methods are called automatically at the appropriate lifecycle stage. The generator handles the override boilerplate:
+
+```cpp
+void MyClass::ready() {
+    // This is called when the node enters the scene tree
+    initialize_stuff();
+}
+
+void MyClass::process(double delta) {
+    // This is called every frame
+    update_position(delta);
+}
+```
+
+### Editor-Specific Lifecycle Methods
+
+You can also create editor-only variants by adding `_editor` suffix:
+
+```cpp
+void ready_editor();              // Called only in the editor
+void process_editor(double delta); // Called only in the editor
+void physics_process_editor(double delta); // Called only in the editor
+```
+
+The generator automatically routes to the `_editor` variant when `Engine::get_singleton()->is_editor_hint()` returns true:
+
+```cpp
+void MyClass::ready_editor() {
+    // This only runs in the Godot editor
+    visualize_debug_info();
+}
+```
+
+### Node Properties
+
+Reference other nodes using C++ pointers. The generator automatically:
+- Exposes a `NodePath` property to the editor
+- Resolves the path to the actual node pointer when `_ready()` is called
+
+```cpp
+GDPROPERTY()
+Camera3D* camera;
+
+GDPROPERTY()
+AudioStreamPlayer* audio_player;
+```
+
+Access the resolved pointers directly in your code:
+
+```cpp
+void MyClass::ready() {
+    if (camera) {
+        camera->set_position(Vector3(0, 5, 10));
+    }
+}
+```
+
+In the Godot editor, the property appears as a `NodePath` that you can set by dragging nodes into the inspector.
 
 ## Quick Start
 
@@ -237,12 +314,92 @@ float MyClass::get_speed() const {
 }
 ```
 
+### Working with Lifecycle Methods
+
+Lifecycle methods are automatically called by Godot at the appropriate times. You don't need to call them manually:
+
+```cpp
+// Header
+class GameController : public Node {
+    GD_GENERATED_BODY()
+
+    GDPROPERTY()
+    float spawn_delay;
+
+    void ready();
+    void process(double delta);
+    void process_editor(double delta);
+
+    GDFUNCTION()
+    void reset_game();
+};
+
+// Implementation
+void GameController::ready() {
+    // Called when node enters the scene tree
+    initialize_spawner();
+}
+
+void GameController::process(double delta) {
+    // Called every frame during gameplay
+    update_enemies(delta);
+}
+
+void GameController::process_editor(double delta) {
+    // Called every frame only in the editor
+    update_debug_visualization(delta);
+}
+```
+
+The generator automatically:
+1. Creates `_ready()`, `_process()`, `_physics_process()` overrides
+2. Resolves node references in `_ready()`
+3. Routes to `*_editor` variants when in editor mode
+4. Calls your user-defined lifecycle methods
+
+### Working with Node Properties
+
+Node references use NodePaths internally, allowing them to be edited in the Godot inspector. Resolution happens automatically in `_ready()`:
+
+```cpp
+// Header
+class CameraController : public Node3D {
+    GD_GENERATED_BODY()
+
+    GDPROPERTY()
+    Camera3D* camera;
+
+    GDPROPERTY()
+    AudioStreamPlayer* background_music;
+
+    void ready();
+};
+
+// Implementation
+void CameraController::ready() {
+    if (camera) {
+        camera->set_position(Vector3(0, 5, 10));
+    }
+    if (background_music) {
+        background_music->play();
+    }
+}
+```
+
+In the editor:
+1. The property appears as a `NodePath` field
+2. Drag a node into the field to set the reference
+3. The path is resolved to the actual pointer when `_ready()` is called
+4. Use null checks before accessing pointers
+
 ## Limitations & Notes
 
-- **Only supported types**: The generator knows about float, int, bool, String, Vector2, Vector3, and Color. Other types default to `Variant::NIL`.
+- **Only supported types**: The generator knows about float, int, bool, String, Vector2, Vector3, Color, and NodePath. Node pointers (`SomeNode*`) are automatically converted to NodePath properties. Other types default to `Variant::NIL`.
 - **No nested classes**: The parser doesn't support nested class definitions.
 - **Method parameter names**: Required in function declarations for proper binding.
 - **Do not edit generated files**: Changes to `.gen.h` and `.gen.cpp` will be overwritten on the next build.
+- **Lifecycle methods**: Only `ready`, `process`, and `physics_process` are supported. Editor variants (`*_editor`) are automatically detected if the method exists.
+- **Node path resolution**: Node pointers are resolved in `_ready()`, so they're guaranteed to be valid after that point. Always check for null pointers if accessed before `_ready()` is called.
 
 ## Building for Different Platforms
 
