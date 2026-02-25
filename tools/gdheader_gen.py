@@ -41,10 +41,29 @@ def is_lifecycle_method(method_name):
 def node_type_name(cpp_type):
     return cpp_type.rstrip('*').strip()
 
-def type_to_include(cpp_type):
+def type_to_include(cpp_type, is_godot_type=True):
     t = node_type_name(cpp_type)
-    s = re.sub(r'([a-z])([A-Z])', r'\1_\2', t)
-    return f'godot_cpp/classes/{s.lower()}.hpp'
+    if is_godot_type:
+        s = re.sub(r'([a-z])([A-Z])', r'\1_\2', t)
+        return f'godot_cpp/classes/{s.lower()}.hpp'
+    else:
+        # For custom types, find the header file
+        return find_header_for_type(t)
+
+def find_header_for_type(type_name):
+    """Find the relative path to the header file for a given class name."""
+    # Search for the class definition in src/
+    for root, dirs, files in os.walk('src'):
+        for file in files:
+            if file.endswith('.h') and not file.endswith('.gen.h'):
+                filepath = os.path.join(root, file)
+                with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+                    if re.search(rf'class\s+{type_name}\s*[:{{\s]', content):
+                        # Return path relative to src/
+                        rel_path = os.path.relpath(filepath, 'src').replace('\\', '/')
+                        return rel_path
+    return None
 
 def get_variant_type(cpp_type):
     return TYPE_MAP.get(cpp_type, 'NIL')
@@ -339,7 +358,14 @@ def write_gen_cpp(parsed: ParsedHeader, out_dir, base_name, header_include, subd
         f'#include <godot_cpp/classes/engine.hpp>\n',
     ]
     for cpp_type, _ in node_refs:
-        lines_cpp.append(f'#include <{type_to_include(cpp_type)}>\n')
+        type_name = node_type_name(cpp_type)
+        header = find_header_for_type(type_name)
+        if header:
+            # Custom project type
+            lines_cpp.append(f'#include "{header}"\n')
+        else:
+            # Godot C++ built-in type
+            lines_cpp.append(f'#include <{type_to_include(cpp_type, is_godot_type=True)}>\n')
     lines_cpp += ['\n', 'using namespace godot;\n', '\n']
 
     # Property implementations
