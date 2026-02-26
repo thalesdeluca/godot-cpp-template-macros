@@ -16,8 +16,10 @@ namespace godot {
 
 template<typename T = Node>
 static T* instantiate_scene(Node* context, const Ref<PackedScene>& scene) {
+    if (scene.is_null()) return nullptr;
     T* instance = Object::cast_to<T>(scene->instantiate());
-    context->get_tree()->get_root()->add_child(instance);
+    if (!instance) return nullptr;
+    context->get_tree()->get_root()->call_deferred("add_child", instance);
     return instance;
 }
 
