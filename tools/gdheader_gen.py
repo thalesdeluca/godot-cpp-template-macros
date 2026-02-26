@@ -35,6 +35,12 @@ LIFECYCLE = [
 def is_node_ref(cpp_type):
     return cpp_type.endswith('*')
 
+def is_ref_type(cpp_type):
+    return cpp_type.startswith('Ref<')
+
+def ref_inner_type(cpp_type):
+    return cpp_type[4:-1]  # Strip 'Ref<' and '>'
+
 def is_lifecycle_method(method_name):
     return method_name.endswith('*')
 
@@ -49,6 +55,11 @@ def type_to_include(cpp_type, is_godot_type=True):
     else:
         # For custom types, find the header file
         return find_header_for_type(t)
+
+def ref_type_to_include(cpp_type):
+    inner = ref_inner_type(cpp_type)
+    s = re.sub(r'([a-z])([A-Z])', r'\1_\2', inner)
+    return f'godot_cpp/classes/{s.lower()}.hpp'
 
 def find_header_for_type(type_name):
     """Find the relative path to the header file for a given class name."""
@@ -88,7 +99,7 @@ def parse_class_declaration(content):
 
 def parse_properties(content):
     """Extract GDPROPERTY declarations."""
-    prop_re = re.compile(r'GDPROPERTY\s*\(\s*\)\s+([\w:]+\*?)\s+(\w+)\s*(?:=\s*[^;]+)?;')
+    prop_re = re.compile(r'GDPROPERTY\s*\(\s*\)\s+(Ref<[\w:]+>|[\w:]+\*?)\s+(\w+)\s*(?:=\s*[^;]+)?;')
     return prop_re.findall(content)
 
 def parse_functions(content):
@@ -197,7 +208,8 @@ def build_signal_params_string(parameters_array):
 def build_header_macro_lines(parsed: ParsedHeader):
     """Build the list of lines for the GD_GENERATED_BODY macro."""
     node_refs   = [(t, n) for t, n in parsed.properties if is_node_ref(t)]
-    value_props = [(t, n) for t, n in parsed.properties if not is_node_ref(t)]
+    ref_types   = [(t, n) for t, n in parsed.properties if is_ref_type(t)]
+    value_props = [(t, n) for t, n in parsed.properties if not is_node_ref(t) and not is_ref_type(t)]
 
     lines = [
         f'    GDCLASS({parsed.class_name}, {parsed.parent_name})',
@@ -213,6 +225,11 @@ def build_header_macro_lines(parsed: ParsedHeader):
 
     lines.append('public:')
 
+    # Always declare _ready override for _resolve_node_paths
+    has_ready = any(godot_name == '_ready' for godot_name, _, _, _ in parsed.lifecycle_methods)
+    if not has_ready:
+        lines.append('    void _ready() override;')
+
     # Override Godot lifecycle methods (public so the engine can call them)
     for godot_name, _, params_decl, _ in parsed.lifecycle_methods:
         p = f'({params_decl})' if params_decl else '()'
@@ -223,12 +240,17 @@ def build_header_macro_lines(parsed: ParsedHeader):
         lines.append(f'    {cpp_type} get_{prop_name}() const;')
         lines.append(f'    void set_{prop_name}({cpp_type} val);')
 
+    # Ref<T> getters/setters
+    for cpp_type, prop_name in ref_types:
+        lines.append(f'    {cpp_type} get_{prop_name}() const;')
+        lines.append(f'    void set_{prop_name}({cpp_type} val);')
+
     # Node-ref NodePath getters/setters + _resolve_node_paths
     for _, prop_name in node_refs:
         lines.append(f'    NodePath get_{prop_name}_path() const;')
         lines.append(f'    void set_{prop_name}_path(NodePath val);')
-    if node_refs:
-        lines.append('    void _resolve_node_paths();')
+    # Always add _resolve_node_paths declaration
+    lines.append('    void _resolve_node_paths();')
 
     return lines
 
@@ -256,11 +278,17 @@ def write_gen_h(parsed: ParsedHeader, out_dir, base_name, subdir):
 def build_cpp_property_implementations(parsed: ParsedHeader):
     """Generate property getter/setter implementations."""
     node_refs   = [(t, n) for t, n in parsed.properties if is_node_ref(t)]
-    value_props = [(t, n) for t, n in parsed.properties if not is_node_ref(t)]
+    ref_types   = [(t, n) for t, n in parsed.properties if is_ref_type(t)]
+    value_props = [(t, n) for t, n in parsed.properties if not is_node_ref(t) and not is_ref_type(t)]
     lines = []
 
     # Value property getters/setters
     for cpp_type, prop_name in value_props:
+        lines.append(f'{cpp_type} {parsed.class_name}::get_{prop_name}() const {{ return {prop_name}; }}\n')
+        lines.append(f'void {parsed.class_name}::set_{prop_name}({cpp_type} val) {{ {prop_name} = val; }}\n')
+
+    # Ref<T> getters/setters
+    for cpp_type, prop_name in ref_types:
         lines.append(f'{cpp_type} {parsed.class_name}::get_{prop_name}() const {{ return {prop_name}; }}\n')
         lines.append(f'void {parsed.class_name}::set_{prop_name}({cpp_type} val) {{ {prop_name} = val; }}\n')
 
@@ -272,16 +300,16 @@ def build_cpp_property_implementations(parsed: ParsedHeader):
     return lines
 
 def build_cpp_resolve_node_paths(parsed: ParsedHeader):
-    """Generate _resolve_node_paths implementation if needed."""
+    """Generate _resolve_node_paths implementation."""
     node_refs = [(t, n) for t, n in parsed.properties if is_node_ref(t)]
     lines = []
 
-    if node_refs:
-        lines.append(f'\nvoid {parsed.class_name}::_resolve_node_paths() {{\n')
-        for cpp_type, prop_name in node_refs:
-            t = node_type_name(cpp_type)
-            lines.append(f'    {prop_name} = get_node<{t}>(_{prop_name}_path);\n')
-        lines.append(f'}}\n')
+    # Always generate implementation
+    lines.append(f'\nvoid {parsed.class_name}::_resolve_node_paths() {{\n')
+    for cpp_type, prop_name in node_refs:
+        t = node_type_name(cpp_type)
+        lines.append(f'    {prop_name} = get_node<{t}>(_{prop_name}_path);\n')
+    lines.append(f'}}\n')
 
     return lines
 
@@ -290,14 +318,23 @@ def build_cpp_lifecycle_wrappers(parsed: ParsedHeader):
     node_refs = [(t, n) for t, n in parsed.properties if is_node_ref(t)]
     lines = ['\n']
 
+    # Always generate _ready if user didn't declare it
+    has_ready = any(godot_name == '_ready' for godot_name, _, _, _ in parsed.lifecycle_methods)
+    if not has_ready:
+        lines.append(f'void {parsed.class_name}::_ready() {{\n')
+        lines.append(f'    _resolve_node_paths();\n')
+        lines.append(f'}}\n\n')
+
     for godot_name, user_name, params_decl, params_call in parsed.lifecycle_methods:
         p_decl = f'({params_decl})' if params_decl else '()'
 
         lines.append(f'void {parsed.class_name}::{godot_name}{p_decl} {{\n')
-        if godot_name == '_ready' and node_refs:
+
+        # Call _resolve_node_paths in _ready
+        if godot_name == '_ready':
             lines.append(f'    _resolve_node_paths();\n')
 
-        lines.append(f'    if (Engine::get_singleton()->is_editor_hint()) {{\n')    
+        lines.append(f'    if (Engine::get_singleton()->is_editor_hint()) {{\n')
 
         if(has_editor_lifecycle_method_defined(user_name, parsed)):
                 lines.append(f'        {user_name}_editor({params_call});\n')
@@ -320,7 +357,8 @@ def has_editor_lifecycle_method_defined(method_name, parsed: ParsedHeader):
 def build_cpp_bind_methods(parsed: ParsedHeader):
     """Generate _bind_methods implementation."""
     node_refs   = [(t, n) for t, n in parsed.properties if is_node_ref(t)]
-    value_props = [(t, n) for t, n in parsed.properties if not is_node_ref(t)]
+    ref_types   = [(t, n) for t, n in parsed.properties if is_ref_type(t)]
+    value_props = [(t, n) for t, n in parsed.properties if not is_node_ref(t) and not is_ref_type(t)]
 
     # Filter out lifecycle methods from the functions list
     lifecycle_names = set(user_name for _, user_name, _, _ in parsed.lifecycle_methods)
@@ -334,10 +372,17 @@ def build_cpp_bind_methods(parsed: ParsedHeader):
         lines.append(f'    ClassDB::bind_method(D_METHOD("set_{prop_name}", "{prop_name}"), &{parsed.class_name}::set_{prop_name});\n')
         lines.append(f'    ADD_PROPERTY(PropertyInfo(Variant::{variant_type}, "{prop_name}"), "set_{prop_name}", "get_{prop_name}");\n')
 
-    for _, prop_name in node_refs:
+    for cpp_type, prop_name in ref_types:
+        inner = ref_inner_type(cpp_type)
+        lines.append(f'    ClassDB::bind_method(D_METHOD("get_{prop_name}"), &{parsed.class_name}::get_{prop_name});\n')
+        lines.append(f'    ClassDB::bind_method(D_METHOD("set_{prop_name}", "{prop_name}"), &{parsed.class_name}::set_{prop_name});\n')
+        lines.append(f'    ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "{prop_name}", PROPERTY_HINT_RESOURCE_TYPE, "{inner}"), "set_{prop_name}", "get_{prop_name}");\n')
+
+    for cpp_type, prop_name in node_refs:
+        t = node_type_name(cpp_type)
         lines.append(f'    ClassDB::bind_method(D_METHOD("get_{prop_name}_path"), &{parsed.class_name}::get_{prop_name}_path);\n')
         lines.append(f'    ClassDB::bind_method(D_METHOD("set_{prop_name}_path", "{prop_name}_path"), &{parsed.class_name}::set_{prop_name}_path);\n')
-        lines.append(f'    ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "{prop_name}_path"), "set_{prop_name}_path", "get_{prop_name}_path");\n')
+        lines.append(f'    ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "{prop_name}_path", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "{t}"), "set_{prop_name}_path", "get_{prop_name}_path");\n')
 
     for signal_name, signal_parameters in parsed.signals:
         lines.append(f'    ADD_SIGNAL(MethodInfo("{signal_name}"{build_signal_params_string(signal_parameters)}));\n')
@@ -350,6 +395,7 @@ def build_cpp_bind_methods(parsed: ParsedHeader):
 
 def write_gen_cpp(parsed: ParsedHeader, out_dir, base_name, header_include, subdir):
     node_refs = [(t, n) for t, n in parsed.properties if is_node_ref(t)]
+    ref_types = [(t, n) for t, n in parsed.properties if is_ref_type(t)]
 
     lines_cpp = [
         f'// AUTO-GENERATED by tools/gdheader_gen.py — do not edit\n',
@@ -361,11 +407,11 @@ def write_gen_cpp(parsed: ParsedHeader, out_dir, base_name, header_include, subd
         type_name = node_type_name(cpp_type)
         header = find_header_for_type(type_name)
         if header:
-            # Custom project type
             lines_cpp.append(f'#include "{header}"\n')
         else:
-            # Godot C++ built-in type
             lines_cpp.append(f'#include <{type_to_include(cpp_type, is_godot_type=True)}>\n')
+    for cpp_type, _ in ref_types:
+        lines_cpp.append(f'#include <{ref_type_to_include(cpp_type)}>\n')
     lines_cpp += ['\n', 'using namespace godot;\n', '\n']
 
     # Property implementations
