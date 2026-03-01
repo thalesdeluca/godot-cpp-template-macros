@@ -249,11 +249,16 @@ godot-cpp-template-macros/
 │       └── register_types.cpp
 ├── tools/
 │   ├── gdheader_gen.py         # Code generator (runs automatically)
-│   └── gen_vcxproj.py          # Generates .sln/.vcxproj for Rider/VS
+│   └── gen_vcxproj.py          # Generates .sln/.vcxproj/.run for Rider/VS
+├── .run/                        # Rider run configurations (AUTO-GENERATED)
+│   ├── windows-editor.run.xml
+│   ├── windows-game.run.xml
+│   └── ...
 ├── godot-cpp/                   # Godot C++ bindings (submodule)
 ├── project/                     # Godot project files
+│   └── bin/                     # Build outputs (debug/ and release/)
 ├── SConstruct                   # Build configuration
-└── out/                         # Build outputs
+└── godot.exe                    # Godot binary (place here for Rider debugging)
 ```
 
 ## How It Works
@@ -418,22 +423,49 @@ scons platform=windows target=template_release
 scons platform=web target=template_release
 ```
 
-## JetBrains Rider / Visual Studio Setup
+## JetBrains Rider Setup
 
-For C++ IntelliSense via ReSharper C++ (without requiring clangd), generate a `.sln` and `.vcxproj` using the included script:
+For C++ IntelliSense via ReSharper C++ (without requiring clangd), generate the project files using the included script:
 
 ```bash
 python tools/gen_vcxproj.py
 ```
 
-This creates `<project_name>.sln` and `<project_name>.vcxproj` in the project root. The project name is read from `SConstruct` (`project_name = "..."`) and falls back to the folder name.
+This creates in the project root:
+- `<project_name>.sln` and `<project_name>.vcxproj` — the MSBuild project (IntelliSense, build/clean/rebuild)
+- `.run/*.run.xml` — pre-configured Rider run configurations
 
-**What the generated project provides:**
+The project name is read from `SConstruct` (`project_name = "..."`) and falls back to the folder name.
 
-- **IntelliSense**: Include paths for `src/`, `godot-cpp/include/`, `godot-cpp/gdextension/`, and `godot-cpp/gen/include/`
-- **Build/Clean/Rebuild**: All wired to `scons` with the correct platform and target
-- **Configurations**: `Debug`/`Release` × `Windows`/`Linux`/`Android` (6 total)
-- **Debugger** (Windows Debug only): Launches `godot.exe --editor --path project/` automatically
+**Workflow in Rider:**
+
+1. Select a **build configuration** from the toolbar (e.g. `Debug Windows`)
+2. Select a **run configuration** from the toolbar (e.g. `Windows Editor`)
+3. Press **Play** (run) or **Debug**
+
+**Build configurations** (`Debug`/`Release` × `Windows`/`Linux`/`Android`):
+
+| Configuration | scons command |
+|---|---|
+| Debug Windows | `scons platform=windows target=template_debug debug_symbols=yes` |
+| Release Windows | `scons platform=windows target=template_release` |
+| Debug Linux | `scons platform=linux target=template_debug` |
+| Release Linux | `scons platform=linux target=template_release` |
+| Debug Android | `scons platform=android target=template_debug` |
+| Release Android | `scons platform=android target=template_release` |
+
+**Run configurations** (what gets launched when you press Play):
+
+| Run config | Launches | Args |
+|---|---|---|
+| Windows Editor | `godot.exe` | `--editor --path project/` |
+| Windows Game | `godot.exe` | `--path project/` |
+| Release Windows | `godot.exe` | `--path project/` |
+| Debug/Release Linux | *(no local launcher)* | — |
+| Debug/Release Android | *(no local launcher)* | — |
+
+**Requirements:**
+- Place a `godot.exe` (Windows export template or editor binary) in the project root for the Windows run configs to work
 
 **Notes:**
 
