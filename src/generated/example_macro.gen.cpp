@@ -30,7 +30,7 @@ void ExampleMacro::_bind_methods() {
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "speed"), "set_speed", "get_speed");
     ClassDB::bind_method(D_METHOD("get_camera_path"), &ExampleMacro::get_camera_path);
     ClassDB::bind_method(D_METHOD("set_camera_path", "camera_path"), &ExampleMacro::set_camera_path);
-    ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "camera_path"), "set_camera_path", "get_camera_path");
+    ADD_PROPERTY(PropertyInfo(Variant::NODE_PATH, "camera_path", PROPERTY_HINT_NODE_PATH_VALID_TYPES, "Camera3D"), "set_camera_path", "get_camera_path");
     ADD_SIGNAL(MethodInfo("test_signal", PropertyInfo(Variant::FLOAT, "param1"), PropertyInfo(Variant::INT, "param2")));
     ClassDB::bind_method(D_METHOD("calculate_test", "test1", "test2", "test3"), &ExampleMacro::calculate_test);
     ClassDB::bind_method(D_METHOD("ready_editor"), &ExampleMacro::ready_editor);

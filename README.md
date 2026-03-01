@@ -248,7 +248,8 @@ godot-cpp-template-macros/
 │       ├── register_types.h    # Godot entry point
 │       └── register_types.cpp
 ├── tools/
-│   └── gdheader_gen.py         # Code generator (runs automatically)
+│   ├── gdheader_gen.py         # Code generator (runs automatically)
+│   └── gen_vcxproj.py          # Generates .sln/.vcxproj for Rider/VS
 ├── godot-cpp/                   # Godot C++ bindings (submodule)
 ├── project/                     # Godot project files
 ├── SConstruct                   # Build configuration
@@ -416,6 +417,29 @@ scons platform=windows target=template_release
 # Web (Emscripten)
 scons platform=web target=template_release
 ```
+
+## JetBrains Rider / Visual Studio Setup
+
+For C++ IntelliSense via ReSharper C++ (without requiring clangd), generate a `.sln` and `.vcxproj` using the included script:
+
+```bash
+python tools/gen_vcxproj.py
+```
+
+This creates `<project_name>.sln` and `<project_name>.vcxproj` in the project root. The project name is read from `SConstruct` (`project_name = "..."`) and falls back to the folder name.
+
+**What the generated project provides:**
+
+- **IntelliSense**: Include paths for `src/`, `godot-cpp/include/`, `godot-cpp/gdextension/`, and `godot-cpp/gen/include/`
+- **Build/Clean/Rebuild**: All wired to `scons` with the correct platform and target
+- **Configurations**: `Debug`/`Release` × `Windows`/`Linux`/`Android` (6 total)
+- **Debugger** (Windows Debug only): Launches `godot.exe --editor --path project/` automatically
+
+**Notes:**
+
+- Re-run `gen_vcxproj.py` if you rename the project or add new platforms
+- The generated files are committed to the repo so teammates don't need to run the script
+- New `.cpp`/`.h` files in `src/` are picked up automatically via wildcards — no need to regenerate
 
 ## Visual Studio Code Setup
 

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug Windows|x64">
+      <Configuration>Debug Windows</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release Windows|x64">
+      <Configuration>Release Windows</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug Linux|x64">
+      <Configuration>Debug Linux</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release Linux|x64">
+      <Configuration>Release Linux</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug Android|x64">
+      <Configuration>Debug Android</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release Android|x64">
+      <Configuration>Release Android</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>MakeFileProj</Keyword>
+    <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>
+    <RootNamespace>example_macro</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Windows|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Windows|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Linux|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Linux|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Android|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Android|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Windows|x64'">
+    <NMakeBuildCommandLine>scons platform=windows target=template_debug</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>scons -c platform=windows target=template_debug</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>scons -c platform=windows target=template_debug &amp;&amp; scons platform=windows target=template_debug</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)project\bin\debug\example_macro.windows.template_debug.x86_64.dll</NMakeOutput>
+    <NMakePreprocessorDefinitions>_DEBUG;UNICODE;_UNICODE;TOOLS_ENABLED</NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>$(ProjectDir)src\;$(ProjectDir)godot-cpp\include\;$(ProjectDir)godot-cpp\gdextension\;$(ProjectDir)godot-cpp\gen\include\</NMakeIncludeSearchPath>
+    <LocalDebuggerCommand>$(ProjectDir)godot.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments>--editor --path project/</LocalDebuggerCommandArguments>
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Windows|x64'">
+    <NMakeBuildCommandLine>scons platform=windows target=template_release</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>scons -c platform=windows target=template_release</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>scons -c platform=windows target=template_release &amp;&amp; scons platform=windows target=template_release</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)project\bin\release\example_macro.windows.template_release.x86_64.dll</NMakeOutput>
+    <NMakePreprocessorDefinitions>UNICODE;_UNICODE</NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>$(ProjectDir)src\;$(ProjectDir)godot-cpp\include\;$(ProjectDir)godot-cpp\gdextension\;$(ProjectDir)godot-cpp\gen\include\</NMakeIncludeSearchPath>
+    <LocalDebuggerCommand>$(ProjectDir)godot.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments>--path project/</LocalDebuggerCommandArguments>
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Linux|x64'">
+    <NMakeBuildCommandLine>scons platform=linux target=template_debug</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>scons -c platform=linux target=template_debug</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>scons -c platform=linux target=template_debug &amp;&amp; scons platform=linux target=template_debug</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)project\bin\debug\libexample_macro.linux.template_debug.x86_64.so</NMakeOutput>
+    <NMakePreprocessorDefinitions>_DEBUG;TOOLS_ENABLED</NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>$(ProjectDir)src\;$(ProjectDir)godot-cpp\include\;$(ProjectDir)godot-cpp\gdextension\;$(ProjectDir)godot-cpp\gen\include\</NMakeIncludeSearchPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Linux|x64'">
+    <NMakeBuildCommandLine>scons platform=linux target=template_release</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>scons -c platform=linux target=template_release</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>scons -c platform=linux target=template_release &amp;&amp; scons platform=linux target=template_release</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)project\bin\release\libexample_macro.linux.template_release.x86_64.so</NMakeOutput>
+    <NMakePreprocessorDefinitions></NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>$(ProjectDir)src\;$(ProjectDir)godot-cpp\include\;$(ProjectDir)godot-cpp\gdextension\;$(ProjectDir)godot-cpp\gen\include\</NMakeIncludeSearchPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Android|x64'">
+    <NMakeBuildCommandLine>scons platform=android target=template_debug</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>scons -c platform=android target=template_debug</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>scons -c platform=android target=template_debug &amp;&amp; scons platform=android target=template_debug</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)project\bin\debug\libexample_macro.android.template_debug.arm64.so</NMakeOutput>
+    <NMakePreprocessorDefinitions>_DEBUG;TOOLS_ENABLED</NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>$(ProjectDir)src\;$(ProjectDir)godot-cpp\include\;$(ProjectDir)godot-cpp\gdextension\;$(ProjectDir)godot-cpp\gen\include\</NMakeIncludeSearchPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Android|x64'">
+    <NMakeBuildCommandLine>scons platform=android target=template_release</NMakeBuildCommandLine>
+    <NMakeCleanCommandLine>scons -c platform=android target=template_release</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>scons -c platform=android target=template_release &amp;&amp; scons platform=android target=template_release</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)project\bin\release\libexample_macro.android.template_release.arm64.so</NMakeOutput>
+    <NMakePreprocessorDefinitions></NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>$(ProjectDir)src\;$(ProjectDir)godot-cpp\include\;$(ProjectDir)godot-cpp\gdextension\;$(ProjectDir)godot-cpp\gen\include\</NMakeIncludeSearchPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClCompile Include="src\**\*.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\**\*.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
