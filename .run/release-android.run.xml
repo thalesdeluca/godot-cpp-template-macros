@@ -1,0 +1,74 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Release Android" type="CppProject" factoryName="C++ Project">
+    <configuration_1>
+      <option name="CONFIGURATION" value="Release Android" />
+      <option name="PLATFORM" value="x64" />
+      <option name="PROJECT_FILE_PATH" value="$PROJECT_DIR$/example_macro.vcxproj" />
+      <option name="CURRENT_LAUNCH_PROFILE" value="Local" />
+      <option name="EXE_PATH" value="$(LocalDebuggerCommand)" />
+      <option name="PROGRAM_PARAMETERS" value="$(LocalDebuggerCommandArguments)" />
+      <option name="WORKING_DIRECTORY" value="$(LocalDebuggerWorkingDirectory)" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="USE_EXTERNAL_CONSOLE" value="0" />
+    </configuration_1>
+    <configuration_2>
+      <option name="CONFIGURATION" value="Debug Windows" />
+      <option name="PLATFORM" value="x64" />
+      <option name="PROJECT_FILE_PATH" value="$PROJECT_DIR$/example_macro.vcxproj" />
+      <option name="CURRENT_LAUNCH_PROFILE" value="Local" />
+      <option name="EXE_PATH" value="$PROJECT_DIR$/godot.exe" />
+      <option name="PROGRAM_PARAMETERS" value="--path project/" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="USE_EXTERNAL_CONSOLE" value="0" />
+    </configuration_2>
+    <configuration_3>
+      <option name="CONFIGURATION" value="Release Windows" />
+      <option name="PLATFORM" value="x64" />
+      <option name="PROJECT_FILE_PATH" value="$PROJECT_DIR$/example_macro.vcxproj" />
+      <option name="CURRENT_LAUNCH_PROFILE" value="Local" />
+      <option name="EXE_PATH" value="$PROJECT_DIR$/godot.exe" />
+      <option name="PROGRAM_PARAMETERS" value="--path project/" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="USE_EXTERNAL_CONSOLE" value="0" />
+    </configuration_3>
+    <configuration_4>
+      <option name="CONFIGURATION" value="Debug Linux" />
+      <option name="PLATFORM" value="x64" />
+      <option name="PROJECT_FILE_PATH" value="$PROJECT_DIR$/example_macro.vcxproj" />
+      <option name="CURRENT_LAUNCH_PROFILE" value="Local" />
+      <option name="EXE_PATH" value="$(LocalDebuggerCommand)" />
+      <option name="PROGRAM_PARAMETERS" value="$(LocalDebuggerCommandArguments)" />
+      <option name="WORKING_DIRECTORY" value="$(LocalDebuggerWorkingDirectory)" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="USE_EXTERNAL_CONSOLE" value="0" />
+    </configuration_4>
+    <configuration_5>
+      <option name="CONFIGURATION" value="Release Linux" />
+      <option name="PLATFORM" value="x64" />
+      <option name="PROJECT_FILE_PATH" value="$PROJECT_DIR$/example_macro.vcxproj" />
+      <option name="CURRENT_LAUNCH_PROFILE" value="Local" />
+      <option name="EXE_PATH" value="$(LocalDebuggerCommand)" />
+      <option name="PROGRAM_PARAMETERS" value="$(LocalDebuggerCommandArguments)" />
+      <option name="WORKING_DIRECTORY" value="$(LocalDebuggerWorkingDirectory)" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="USE_EXTERNAL_CONSOLE" value="0" />
+    </configuration_5>
+    <configuration_6>
+      <option name="CONFIGURATION" value="Debug Android" />
+      <option name="PLATFORM" value="x64" />
+      <option name="PROJECT_FILE_PATH" value="$PROJECT_DIR$/example_macro.vcxproj" />
+      <option name="CURRENT_LAUNCH_PROFILE" value="Local" />
+      <option name="EXE_PATH" value="$(LocalDebuggerCommand)" />
+      <option name="PROGRAM_PARAMETERS" value="$(LocalDebuggerCommandArguments)" />
+      <option name="WORKING_DIRECTORY" value="$(LocalDebuggerWorkingDirectory)" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="USE_EXTERNAL_CONSOLE" value="0" />
+    </configuration_6>
+    <option name="DEFAULT_PROJECT_PATH" value="$PROJECT_DIR$/example_macro.vcxproj" />
+    <method v="2">
+      <option name="Build" projectName="Selected project" />
+    </method>
+  </configuration>
+</component>

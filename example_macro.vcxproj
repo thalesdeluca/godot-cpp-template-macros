@@ -65,14 +65,14 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Windows|x64'">
-    <NMakeBuildCommandLine>scons platform=windows target=template_debug</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>scons platform=windows target=template_debug debug_symbols=yes</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>scons -c platform=windows target=template_debug</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>scons -c platform=windows target=template_debug &amp;&amp; scons platform=windows target=template_debug</NMakeReBuildCommandLine>
-    <NMakeOutput>$(ProjectDir)project\bin\debug\example_macro.windows.template_debug.x86_64.dll</NMakeOutput>
+    <NMakeReBuildCommandLine>scons -c platform=windows target=template_debug &amp;&amp; scons platform=windows target=template_debug debug_symbols=yes</NMakeReBuildCommandLine>
+    <NMakeOutput>$(ProjectDir)godot.exe</NMakeOutput>
     <NMakePreprocessorDefinitions>_DEBUG;UNICODE;_UNICODE;TOOLS_ENABLED</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath>$(ProjectDir)src\;$(ProjectDir)godot-cpp\include\;$(ProjectDir)godot-cpp\gdextension\;$(ProjectDir)godot-cpp\gen\include\</NMakeIncludeSearchPath>
     <LocalDebuggerCommand>$(ProjectDir)godot.exe</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>--editor --path project/</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments></LocalDebuggerCommandArguments>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
@@ -80,11 +80,11 @@
     <NMakeBuildCommandLine>scons platform=windows target=template_release</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>scons -c platform=windows target=template_release</NMakeCleanCommandLine>
     <NMakeReBuildCommandLine>scons -c platform=windows target=template_release &amp;&amp; scons platform=windows target=template_release</NMakeReBuildCommandLine>
-    <NMakeOutput>$(ProjectDir)project\bin\release\example_macro.windows.template_release.x86_64.dll</NMakeOutput>
+    <NMakeOutput>$(ProjectDir)godot.exe</NMakeOutput>
     <NMakePreprocessorDefinitions>UNICODE;_UNICODE</NMakePreprocessorDefinitions>
     <NMakeIncludeSearchPath>$(ProjectDir)src\;$(ProjectDir)godot-cpp\include\;$(ProjectDir)godot-cpp\gdextension\;$(ProjectDir)godot-cpp\gen\include\</NMakeIncludeSearchPath>
     <LocalDebuggerCommand>$(ProjectDir)godot.exe</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>--path project/</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments></LocalDebuggerCommandArguments>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
