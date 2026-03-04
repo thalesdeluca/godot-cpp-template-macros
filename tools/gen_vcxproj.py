@@ -100,6 +100,14 @@ def make_build_configs():
 # ---------------------------------------------------------------------------
 def make_run_configs():
     run_cfgs = []
+
+    # Add a clean build config (no platform-specific, runs scons -c)
+    run_cfgs.append({
+        "label": "Clean Build",
+        "is_clean": True,
+        "platform": None,
+    })
+
     for plat in PLATFORMS:
         if plat["name"] == "Windows":
             # Two launch modes for the debug build
@@ -187,6 +195,11 @@ def generate_vcxproj(build_configs):
         ]
 
     lines += ['  <Import Project="$(VCTargetsPath)\\Microsoft.Cpp.props" />']
+    lines += [
+        '  <PropertyGroup>',
+        '    <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>',
+        '  </PropertyGroup>',
+    ]
 
     # NMake + debugger PropertyGroups
     for cfg in build_configs:
@@ -197,7 +210,7 @@ def generate_vcxproj(build_configs):
         build_type = "debug" if cfg["is_debug"] else "release"
         suffix = f"{scons_plat}.{target}.{plat['arch']}"
         dll_output = f"project\\bin\\{build_type}\\{plat['lib_prefix']}{PROJECT_NAME}.{suffix}{plat['lib_ext']}"
-        extra = "debug_symbols=yes" if cfg["is_debug"] and plat["debugger"] else ""
+        extra = "debug_symbols=yes optimize=none" if cfg["is_debug"] and plat["debugger"] else ""
 
         # Rider reads NMakeOutput to determine the launch executable.
         # Point Windows builds at godot.exe so Rider never tries to execute the DLL.
@@ -258,6 +271,28 @@ def _run_xml_block(i, build_cfg, launch_args):
     lines += [f'      <option name="USE_EXTERNAL_CONSOLE" value="0" />']
     lines += [f'    </configuration_{i}>']
     return lines
+
+
+def generate_clean_run_xml(run_cfg):
+    """Generate a clean build run.xml (special case, not tied to build configs)."""
+    lines = ['<component name="ProjectRunConfigurationManager">']
+    lines += [f'  <configuration default="false" name="{run_cfg["label"]}" type="ShConfigurationType">']
+    lines += ['    <option name="SCRIPT_TEXT" value="scons -c" />']
+    lines += ['    <option name="INDEPENDENT_SCRIPT_PATH" value="false" />']
+    lines += ['    <option name="SCRIPT_PATH" value="" />']
+    lines += ['    <option name="SCRIPT_OPTIONS" value="" />']
+    lines += ['    <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />']
+    lines += ['    <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />']
+    lines += ['    <option name="INDEPENDENT_INTERPRETER_PATH" value="true" />']
+    lines += ['    <option name="INTERPRETER_PATH" value="" />']
+    lines += ['    <option name="INTERPRETER_OPTIONS" value="" />']
+    lines += ['    <option name="EXECUTE_IN_TERMINAL" value="true" />']
+    lines += ['    <option name="EXECUTE_SCRIPT_FILE" value="false" />']
+    lines += ['    <envs />']
+    lines += ['    <method v="2" />']
+    lines += ['  </configuration>']
+    lines += ['</component>']
+    return "\n".join(lines) + "\n"
 
 
 def generate_run_xml(run_cfg, all_build_configs):
@@ -342,7 +377,11 @@ if __name__ == "__main__":
         filename = run_cfg["label"].lower().replace(" ", "-") + ".run.xml"
         path = os.path.join(run_dir, filename)
         with open(path, "w", encoding="utf-8") as f:
-            f.write(generate_run_xml(run_cfg, build_configs))
+            # Handle clean build config specially
+            if run_cfg.get("is_clean"):
+                f.write(generate_clean_run_xml(run_cfg))
+            else:
+                f.write(generate_run_xml(run_cfg, build_configs))
         generated.add(filename)
         print(f"[gen_vcxproj] Written .run/{filename}")
 

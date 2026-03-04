@@ -57,7 +57,15 @@ def type_to_include(cpp_type, is_godot_type=True):
         return find_header_for_type(t)
 
 def ref_type_to_include(cpp_type):
+    """Get include path for a Ref<Type>. Check custom classes first, then Godot."""
     inner = ref_inner_type(cpp_type)
+
+    # First, check if it's a custom class in the project
+    custom_header = find_header_for_type(inner)
+    if custom_header:
+        return custom_header
+
+    # Fall back to Godot class naming convention
     s = re.sub(r'([a-z])([A-Z])', r'\1_\2', inner)
     return f'godot_cpp/classes/{s.lower()}.hpp'
 
@@ -79,15 +87,63 @@ def find_header_for_type(type_name):
 def get_variant_type(cpp_type):
     return TYPE_MAP.get(cpp_type, 'NIL')
 
+def is_godot_class(class_name):
+    """Check if a class is a Godot engine class."""
+    # Known Godot classes from godot_cpp
+    godot_classes = {
+        'Node', 'Node2D', 'Node3D', 'Control', 'CanvasItem', 'Viewport',
+        'Window', 'SceneTree', 'Resource', 'RefCounted', 'Object',
+        'RigidBody3D', 'CharacterBody3D', 'PhysicsBody3D', 'CollisionObject3D',
+        'Camera3D', 'Light3D', 'OmniLight3D', 'DirectionalLight3D', 'SpotLight3D',
+        'MeshInstance3D', 'AnimatedSprite3D', 'Sprite3D',
+    }
+    return class_name in godot_classes
+
+def find_godot_base_class(class_name, visited=None):
+    """Walk up the inheritance chain to find the first Godot base class.
+    Returns the Godot class name, or None if not found."""
+    if visited is None:
+        visited = set()
+
+    if class_name in visited:
+        return None
+    visited.add(class_name)
+
+    # Check if this is already a Godot class
+    if is_godot_class(class_name):
+        return class_name
+
+    # Find the parent of this class
+    parent = None
+    for root, dirs, files in os.walk('src'):
+        for file in files:
+            if file.endswith('.h') and not file.endswith('.gen.h'):
+                filepath = os.path.join(root, file)
+                with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+                    match = re.search(rf'class\s+{re.escape(class_name)}\s*:\s*(?:(?:public|private|protected)\s+)?(\w+)[^{{]*\{{', content)
+                    if match:
+                        parent = match.group(1)
+                        break
+        if parent:
+            break
+
+    if parent:
+        return find_godot_base_class(parent, visited)
+
+    return None
+
 @dataclass
 class ParsedHeader:
     class_name: str
     parent_name: str
+    godot_base_class: str  # The actual Godot class in the hierarchy
     properties: list
     functions: list
     signals: list
     lifecycle_methods: list
-    lifecycle_editor_methods: list 
+    lifecycle_editor_methods: list
+    is_abstract: bool = False 
 
 def parse_class_declaration(content):
     """Extract class name and parent class from header.
@@ -141,6 +197,44 @@ def parse_lifecycle_methods(content):
 
     return lifecycle_methods, lifecycle_editor_methods
 
+def collect_inherited_lifecycle_methods(parent_name, own_user_names, visited=None):
+    """Walk parent classes to find lifecycle methods not declared in the current (concrete) class.
+    Returns a list of (godot_name, user_name, params_decl, params_call) tuples."""
+    if visited is None:
+        visited = set()
+    if not parent_name or parent_name in visited or is_godot_class(parent_name):
+        return []
+    visited.add(parent_name)
+
+    for root, _, files in os.walk('src'):
+        for file in files:
+            if not file.endswith('.h') or file.endswith('.gen.h'):
+                continue
+            filepath = os.path.join(root, file)
+            with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+            if not re.search(rf'class\s+{re.escape(parent_name)}\s*[:{{\s]', content):
+                continue
+            # Found the parent's header — collect its lifecycle methods
+            lifecycle, _ = parse_lifecycle_methods(content)
+            inherited = [(g, u, pd, pc) for g, u, pd, pc in lifecycle if u not in own_user_names]
+            for entry in inherited:
+                own_user_names.add(entry[1])
+            # Recurse into grandparent
+            match = re.search(
+                rf'class\s+{re.escape(parent_name)}\s*:\s*(?:(?:public|private|protected)\s+)?(\w+)[^{{]*\{{',
+                content)
+            grandparent = match.group(1) if match else None
+            inherited += collect_inherited_lifecycle_methods(grandparent, own_user_names, visited)
+            return inherited
+    return []
+
+def is_abstract_class(content):
+    """Check if a class has any pure virtual methods (= 0)."""
+    # Match any method declaration ending with = 0;
+    pure_virtual_re = re.compile(r'virtual\s+\w+[\s\*&]*\w+\s*\([^)]*\)\s*=\s*0\s*;')
+    return bool(pure_virtual_re.search(content))
+
 def parse_header(filepath):
     """Parse a GDExtension header file and extract class information."""
     with open(filepath, encoding='utf-8') as f:
@@ -153,12 +247,25 @@ def parse_header(filepath):
     if not class_name or not parent_name:
         return None
 
+    # Find the actual Godot base class in the inheritance chain
+    godot_base = find_godot_base_class(class_name)
+    if not godot_base:
+        # Skip generation if no Godot base class found
+        return None
+
     properties = parse_properties(content)
     functions = parse_functions(content)
     signals = parse_signals(content)
     lifecycle_methods, editor_methods = parse_lifecycle_methods(content)
+    abstract = is_abstract_class(content)
 
-    return ParsedHeader(class_name, parent_name, properties, functions, signals, lifecycle_methods, editor_methods)
+    # For concrete classes, inherit lifecycle methods from abstract parent classes so the
+    # generator can emit properly-typed overrides (avoids godot_cpp template deduction errors)
+    if not abstract:
+        own_user_names = {u for _, u, _, _ in lifecycle_methods}
+        lifecycle_methods += collect_inherited_lifecycle_methods(parent_name, own_user_names)
+
+    return ParsedHeader(class_name, parent_name, godot_base, properties, functions, signals, lifecycle_methods, editor_methods, abstract)
 
 def ensure_gen_include(filepath, base_name, rel_dir):
     include_path = f'generated/{rel_dir}/{base_name}.gen.h' if rel_dir != '.' else f'generated/{base_name}.gen.h'
@@ -212,28 +319,28 @@ def build_header_macro_lines(parsed: ParsedHeader):
     value_props = [(t, n) for t, n in parsed.properties if not is_node_ref(t) and not is_ref_type(t)]
 
     lines = [
-        f'    GDCLASS({parsed.class_name}, {parsed.parent_name})',
+        f'    GDCLASS({parsed.class_name}, {parsed.godot_base_class})',
         'protected:',
         '    static void _bind_methods();',
     ]
 
-    # Private: NodePath storage for node-ref properties
-    if node_refs:
+    # Private: NodePath storage for node-ref properties (concrete classes only)
+    if not parsed.is_abstract and node_refs:
         lines.append('private:')
         for _, prop_name in node_refs:
             lines.append(f'    NodePath _{prop_name}_path;')
 
     lines.append('public:')
 
-    # Always declare _ready override for _resolve_node_paths
-    has_ready = any(godot_name == '_ready' for godot_name, _, _, _ in parsed.lifecycle_methods)
-    if not has_ready:
-        lines.append('    void _ready() override;')
+    # Lifecycle overrides: concrete classes only (avoids template deduction issues in godot_cpp)
+    if not parsed.is_abstract:
+        has_ready = any(godot_name == '_ready' for godot_name, _, _, _ in parsed.lifecycle_methods)
+        if node_refs and not has_ready:
+            lines.append('    void _ready() override;')
 
-    # Override Godot lifecycle methods (public so the engine can call them)
-    for godot_name, _, params_decl, _ in parsed.lifecycle_methods:
-        p = f'({params_decl})' if params_decl else '()'
-        lines.append(f'    void {godot_name}{p} override;')
+        for godot_name, _, params_decl, _ in parsed.lifecycle_methods:
+            p = f'({params_decl})' if params_decl else '()'
+            lines.append(f'    void {godot_name}{p} override;')
 
     # Value property getters/setters
     for cpp_type, prop_name in value_props:
@@ -249,8 +356,9 @@ def build_header_macro_lines(parsed: ParsedHeader):
     for _, prop_name in node_refs:
         lines.append(f'    NodePath get_{prop_name}_path() const;')
         lines.append(f'    void set_{prop_name}_path(NodePath val);')
-    # Always add _resolve_node_paths declaration
-    lines.append('    void _resolve_node_paths();')
+    # Add _resolve_node_paths declaration only if there are node refs
+    if node_refs:
+        lines.append('    void _resolve_node_paths();')
 
     return lines
 
@@ -304,7 +412,10 @@ def build_cpp_resolve_node_paths(parsed: ParsedHeader):
     node_refs = [(t, n) for t, n in parsed.properties if is_node_ref(t)]
     lines = []
 
-    # Always generate implementation
+    # Only generate if there are node references to resolve
+    if not node_refs:
+        return lines
+
     lines.append(f'\nvoid {parsed.class_name}::_resolve_node_paths() {{\n')
     for cpp_type, prop_name in node_refs:
         t = node_type_name(cpp_type)
@@ -318,9 +429,9 @@ def build_cpp_lifecycle_wrappers(parsed: ParsedHeader):
     node_refs = [(t, n) for t, n in parsed.properties if is_node_ref(t)]
     lines = ['\n']
 
-    # Always generate _ready if user didn't declare it
+    # Generate _ready if user didn't declare it and there are node refs to resolve
     has_ready = any(godot_name == '_ready' for godot_name, _, _, _ in parsed.lifecycle_methods)
-    if not has_ready:
+    if node_refs and not has_ready:
         lines.append(f'void {parsed.class_name}::_ready() {{\n')
         lines.append(f'    _resolve_node_paths();\n')
         lines.append(f'}}\n\n')
@@ -330,8 +441,8 @@ def build_cpp_lifecycle_wrappers(parsed: ParsedHeader):
 
         lines.append(f'void {parsed.class_name}::{godot_name}{p_decl} {{\n')
 
-        # Call _resolve_node_paths in _ready
-        if godot_name == '_ready':
+        # Call _resolve_node_paths in _ready (only if there are node refs)
+        if godot_name == '_ready' and node_refs:
             lines.append(f'    _resolve_node_paths();\n')
 
         lines.append(f'    if (Engine::get_singleton()->is_editor_hint()) {{\n')
@@ -414,31 +525,64 @@ def write_gen_cpp(parsed: ParsedHeader, out_dir, base_name, header_include, subd
         lines_cpp.append(f'#include <{ref_type_to_include(cpp_type)}>\n')
     lines_cpp += ['\n', 'using namespace godot;\n', '\n']
 
-    # Property implementations
-    lines_cpp.extend(build_cpp_property_implementations(parsed))
+    if parsed.is_abstract:
+        # Abstract classes: only empty _bind_methods (required by GDCLASS, no registration)
+        lines_cpp.append(f'void {parsed.class_name}::_bind_methods() {{}}\n\n')
+    else:
+        # Property implementations
+        lines_cpp.extend(build_cpp_property_implementations(parsed))
 
-    # Node path resolution
-    lines_cpp.extend(build_cpp_resolve_node_paths(parsed))
+        # Node path resolution
+        lines_cpp.extend(build_cpp_resolve_node_paths(parsed))
 
-    # Lifecycle method overrides
-    lines_cpp.extend(build_cpp_lifecycle_wrappers(parsed))
+        # Lifecycle method overrides
+        lines_cpp.extend(build_cpp_lifecycle_wrappers(parsed))
 
-    # Method binding
-    lines_cpp.extend(build_cpp_bind_methods(parsed))
+        # Method binding
+        lines_cpp.extend(build_cpp_bind_methods(parsed))
 
-    lines_cpp.append(
-        f'namespace {{\n'
-        f'    bool _registered_{parsed.class_name} = []() {{\n'
-        f'        godot::ClassRegistry::get().add([]() {{ GDREGISTER_CLASS({parsed.class_name}); }});\n'
-        f'        return true;\n'
-        f'    }}();\n'
-        f'}}\n'
-    )
+        # Class registration
+        lines_cpp.append(
+            f'namespace {{\n'
+            f'    bool _registered_{parsed.class_name} = []() {{\n'
+            f'        godot::ClassRegistry::get().add([]() {{ GDREGISTER_CLASS({parsed.class_name}); }});\n'
+            f'        return true;\n'
+            f'    }}();\n'
+            f'}}\n'
+        )
 
     gen_cpp_path = os.path.join(out_dir, subdir, f'{base_name}.gen.cpp').replace('\\', '/') if subdir != '.' else os.path.join(out_dir, f'{base_name}.gen.cpp').replace('\\', '/')
     os.makedirs(os.path.dirname(gen_cpp_path), exist_ok=True)
     with open(gen_cpp_path, 'w', encoding='utf-8') as f:
         f.writelines(lines_cpp)
+
+def cleanup_orphaned_generated_files(src_dir, out_dir):
+    """Delete .gen.h and .gen.cpp files that don't have corresponding source headers."""
+    generated_to_keep = set()
+
+    # First pass: find all source headers that should have generated files
+    for root, _, files in os.walk(src_dir):
+        for filename in files:
+            if not filename.endswith('.h') or filename.endswith('.gen.h'):
+                continue
+            filepath = os.path.join(root, filename)
+            if parse_header(filepath) is not None:
+                base_name = os.path.splitext(filename)[0]
+                rel_dir = os.path.relpath(os.path.dirname(filepath), src_dir).replace('\\', '/')
+                gen_h = os.path.join(out_dir, rel_dir, f'{base_name}.gen.h').replace('\\', '/')
+                gen_cpp = os.path.join(out_dir, rel_dir, f'{base_name}.gen.cpp').replace('\\', '/')
+                generated_to_keep.add(gen_h)
+                generated_to_keep.add(gen_cpp)
+
+    # Second pass: delete orphaned generated files
+    if os.path.exists(out_dir):
+        for root, dirs, files in os.walk(out_dir):
+            for filename in files:
+                if filename.endswith('.gen.h') or filename.endswith('.gen.cpp'):
+                    filepath = os.path.join(root, filename).replace('\\', '/')
+                    if filepath not in generated_to_keep:
+                        os.remove(filepath)
+                        print(f'[gdheader_gen] Deleted orphaned: {filepath}')
 
 def generate(src_dir, out_dir):
     os.makedirs(out_dir, exist_ok=True)
@@ -459,6 +603,9 @@ def generate(src_dir, out_dir):
             props_info = f'{len(parsed.properties)} propert{"y" if len(parsed.properties) == 1 else "ies"}' if parsed.properties else 'no properties'
             output_path = f'generated/{rel_dir}/{base_name}.gen.h' if rel_dir != '.' else f'generated/{base_name}.gen.h'
             print(f'[gdheader_gen] {parsed.class_name} ({props_info}) -> {output_path} / .gen.cpp')
+
+    # Clean up orphaned generated files
+    cleanup_orphaned_generated_files(src_dir, out_dir)
 
 if __name__ == '__main__':
     script_dir = os.path.dirname(os.path.abspath(__file__))
